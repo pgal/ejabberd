@@ -27,5 +27,10 @@ ct() ->
         %% group no. 2 tests
         %, {testcase, block_jid_message}
         %, {testcase, block_jid_all}
+
+        , {suite, "offline_SUITE"}
+        , {group, [presence]}
+        %, {testcase, negative_presence_no_mod_offline}
+        , {testcase, negative_presence}
     ]),
     init:stop(0).

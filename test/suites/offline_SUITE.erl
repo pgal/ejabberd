@@ -9,11 +9,13 @@
 %%--------------------------------------------------------------------
 
 all() ->
-    [{group, the_group}].
+    [{group, presence}].
 
 groups() ->
-    [{the_group, [sequence], [testcase1
-                              ]}].
+    [{presence, [sequence], [
+        negative_presence_no_mod_offline,
+        negative_presence
+        ]}].
 
 suite() ->
     escalus:suite().
@@ -44,10 +46,77 @@ end_per_testcase(CaseName, Config) ->
 %% Tests
 %%--------------------------------------------------------------------
 
-testcase1(Config) ->
-    escalus:story(Config, [1], fun(_Mary) ->
+negative_presence_no_mod_offline(Config) ->
+    escalus:story(Config, [1, 1], fun(Mary, Jane) ->
 
-        ok
+        Msg = "Hi, Jane!",
+        BareJane = bare_jid(Jane),
+        escalus_client:send(Mary, chat_to_jid(BareJane, Msg)),
+        escalus_assert:is_chat_message(Msg,
+            escalus_client:wait_for_stanza(Jane)),
+
+        %% set negative presence
+        NegativePresence = prioritized_presence(available, -1),
+        escalus_client:send(Jane, NegativePresence),
+        %escalus_utils:log_stanzas("Negative presence", [NegativePresence]),
+        escalus_assert:is_presence_stanza(
+            escalus_client:wait_for_stanza(Jane)),
+
+        %% chat again
+        escalus_client:send(Mary, chat_to_jid(BareJane, Msg)),
+
+        %% Mary should receive service-unavailable
+        Error = escalus_client:wait_for_stanza(Mary),
+        escalus_utils:log_stanzas("Should be service-unavailable", [Error]),
+        escalus_assert:is_error(Error, <<"cancel">>,
+            'service-unavailable'),
+
+        %% Jane should not receive message
+        timer:sleep(500),
+        escalus_assert:has_no_stanzas(Jane)
+
+        end).
+
+negative_presence(Config) ->
+    escalus:story(Config, [1, 1], fun(Mary, Jane) ->
+
+        %% No idea why, but when mod_offline is loaded more presences fly
+        %% around. Maybe more than usual are sent, maybe they just aren't
+        %% caught by escalus:story - I don't know.
+        UselessPresence1 = escalus_client:wait_for_stanza(Jane),
+        escalus_utils:log_stanzas("Should be presence", [UselessPresence1]),
+        UselessPresence2 = escalus_client:wait_for_stanza(Mary),
+        escalus_utils:log_stanzas("Should be presence", [UselessPresence2]),
+
+        Msg = "Hi, Jane!",
+        BareJane = bare_jid(Jane),
+        escalus_client:send(Mary, chat_to_jid(BareJane, Msg)),
+        escalus_assert:is_chat_message(Msg,
+            escalus_client:wait_for_stanza(Jane)),
+
+        %% set negative presence
+        NegativePresence = prioritized_presence(available, -1),
+        escalus_client:send(Jane, NegativePresence),
+        %escalus_utils:log_stanzas("Negative presence", [NegativePresence]),
+        escalus_assert:is_presence_stanza(
+            escalus_client:wait_for_stanza(Jane)),
+
+        %% Jane should not receive message
+        escalus_client:send(Mary, chat_to_jid(BareJane, Msg)),
+        timer:sleep(500),
+        escalus_assert:has_no_stanzas(Jane),
+
+        %% set non-negative presence
+        timer:sleep(500),
+        escalus_client:send(Jane, escalus_stanza:presence(available)),
+        escalus_assert:is_presence_stanza(escalus_client:wait_for_stanza(Jane)),
+
+        %% Mary should not receive anything
+        escalus_assert:has_no_stanzas(Mary),
+
+        %% Jane should receive delayed message
+        escalus_assert:is_chat_message(
+            Msg, escalus_client:wait_for_stanza(Jane))
 
         end).
 
@@ -55,3 +124,15 @@ testcase1(Config) ->
 %% Helpers
 %%-----------------------------------------------------------------
 
+bare_jid(Client) ->
+    hd(string:tokens(binary_to_list(Client#client.jid), "/")).
+
+prioritized_presence(Type, Priority) ->
+    exmpp_presence:set_priority(
+        escalus_stanza:presence(Type),
+        Priority).
+
+chat_to_jid(ClientJid, Msg) ->
+    exmpp_stanza:set_recipient(
+        exmpp_message:chat(Msg), 
+        ClientJid).
