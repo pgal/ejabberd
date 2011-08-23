@@ -30,7 +30,9 @@ ct() ->
 
         , {suite, "offline_SUITE"}
         , {group, [presence]}
+        %% with repeat_until_any_ok single test runs fail,
+        %% so launch entire group
         %, {testcase, negative_presence_no_mod_offline}
-        , {testcase, negative_presence}
+        %, {testcase, negative_presence}
     ]),
     init:stop(0).
