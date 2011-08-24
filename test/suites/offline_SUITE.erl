@@ -117,8 +117,10 @@ negative_presence(Config) ->
         escalus_assert:has_no_stanzas(Mary),
 
         %% Jane should receive delayed message
-        escalus_assert:is_chat_message(
-            Msg, escalus_client:wait_for_stanza(Jane))
+        DelayedMessage = escalus_client:wait_for_stanza(Jane),
+        escalus_utils:log_stanzas("Delayed message", [DelayedMessage]),
+        escalus_assert:is_chat_message(Msg, DelayedMessage),
+        true = is_delayed(DelayedMessage)
 
         end).
 
@@ -138,3 +140,6 @@ chat_to_jid(ClientJid, Msg) ->
     exmpp_stanza:set_recipient(
         exmpp_message:chat(Msg), 
         ClientJid).
+
+is_delayed(Stanza) ->
+    true == exmpp_xml:has_element(Stanza, 'delay').
