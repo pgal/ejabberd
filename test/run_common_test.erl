@@ -34,5 +34,7 @@ ct() ->
         %% so launch entire group
         %, {testcase, negative_presence_no_mod_offline}
         %, {testcase, negative_presence}
+        %, {group, [load]}
+        %, {testcase, load_data}
     ]),
     init:stop(0).

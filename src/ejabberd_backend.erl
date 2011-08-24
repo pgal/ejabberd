@@ -5,29 +5,31 @@
 %%%-------------------------------------------------------------------
 -module(ejabberd_backend).
 
--export([get/2,
+-export([init/2,
+         dispatch/4,
+         get/2,
          load/2]).
+
+init(Host, Module) ->
+    load(Module, get(Host, Module)).
+
+%% Dispatch a function to appropriate backend module.
+%% Use from within generic mod_something to access backend specific
+%% variant of some function.
+dispatch(Module, Backend, Function, Args) ->
+    apply(module_to_bmodule(Module, Backend), Function, Args).
 
 %% Get DB backend per Host/Module combination.
 get(Host, Module) ->
-    %% extend if/when more backends appear (see also _1_)
-    MnesiaBackend = list_to_atom(atom_to_list(Module) ++ "_mnesia"),
-    OdbcBackend = list_to_atom(atom_to_list(Module) ++ "_odbc"),
-    RiakBackend = list_to_atom(atom_to_list(Module) ++ "_riak"),
-    
-    Modules = ejabberd_config:get_local_option({modules, Host}),
-    Select = fun({Mod,_}, Acc) ->
-        %% ASSUMPTION: either mod_something or mod_something_odbc
-        %% (or some other backend) is used, never both/all
-        case Mod of
-            %% _1_ add cases for more backends
-            MnesiaBackend -> mnesia;
-            OdbcBackend -> odbc;
-            RiakBackend -> riak;
-            _ -> Acc
-        end
-    end,
-    lists:foldl(Select, none, Modules).
+    {Module, Options} = proplists:lookup(Module,
+        ejabberd_config:get_local_option({modules, Host})),
+    case proplists:lookup(backend, Options) of
+        {backend, Backend} when Backend =:= mnesia;
+                                Backend =:= odbc;
+                                Backend =:= riak ->
+            Backend;
+        _ -> none
+    end.
 
 %% load(some_mod, some_atom) compiles and loads into the VM a module with
 %% following content:
@@ -45,3 +47,8 @@ load(Module, Backend) ->
         "backend() -> ", Backend, ". "]),
     {ModName, Binary} = dynamic_compile:from_string(Code),
     code:load_binary(ModName, lists:concat([ModName, ".erl"]), Binary).
+
+%%% Helpers
+
+module_to_bmodule(Module, Backend) ->
+    list_to_atom(lists:concat([Module, "_", Backend])).
