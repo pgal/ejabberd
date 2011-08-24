@@ -9,12 +9,16 @@
 %%--------------------------------------------------------------------
 
 all() ->
-    [{group, presence}].
+    [{group, presence},
+     {group, load}].
 
 groups() ->
     [{presence, [{repeat_until_any_ok, 5}], [
         negative_presence_no_mod_offline,
         negative_presence
+        ]},
+     {load, [sequence], [
+        load_data
         ]}].
 
 suite() ->
@@ -121,6 +125,28 @@ negative_presence(Config) ->
         escalus_utils:log_stanzas("Delayed message", [DelayedMessage]),
         escalus_assert:is_chat_message(Msg, DelayedMessage),
         true = is_delayed(DelayedMessage)
+
+        end).
+
+load_data(Config) ->
+    escalus:story(Config, [1, 1], fun(Mary, Jane) ->
+
+        Msg = "Hi, Jane!",
+        BareJane = bare_jid(Jane),
+        escalus_client:send(Mary, chat_to_jid(BareJane, Msg)),
+        escalus_assert:is_chat_message(Msg,
+            escalus_client:wait_for_stanza(Jane)),
+
+        %% set negative presence
+        NegativePresence = prioritized_presence(available, -1),
+        escalus_client:send(Jane, NegativePresence),
+        %escalus_utils:log_stanzas("Negative presence", [NegativePresence]),
+        escalus_assert:is_presence_stanza(
+            escalus_client:wait_for_stanza(Jane)),
+
+        %% Jane should not receive message
+        escalus_client:send(Mary, chat_to_jid(BareJane, Msg)),
+        erlang:halt()
 
         end).
 
