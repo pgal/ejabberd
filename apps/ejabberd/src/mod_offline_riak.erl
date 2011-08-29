@@ -1,10 +1,8 @@
--module(mod_offline_mnesia).
+-module(mod_offline_riak).
 
 -compile([export_all]).
 
 -include("mod_offline.hrl").
-
--define(OFFLINE_TABLE_LOCK_THRESHOLD, 1000).
 
 %% TODO: adjust for binary-/string-only versions
 -type string_type() :: binary() | string().
@@ -12,40 +10,37 @@
 -type time() :: {integer(), integer(), integer()}.
 
 create_table() ->
-    mnesia:create_table(offline_msg,
-        [{disc_only_copies, [node()]},
-            {type, bag},
-            {attributes, record_info(fields, offline_msg)}]),
-    update_table().
+    ok.
 
 -spec store_offline_messages(user(), list(), infinity | integer())
     -> ok | {error, any()}.
 store_offline_messages(US, Msgs, MaxOfflineMsgs) ->
-    Len = length(Msgs),
-    F = fun() ->
-        %% Only count messages if needed:
-        Count =
-            if MaxOfflineMsgs =/= infinity ->
-                Len + p1_mnesia:count_records(
-                    offline_msg, 
-                    #offline_msg{us=US, _='_'});
-            true -> 
-                0
-        end,
-        if
-            Count > MaxOfflineMsgs ->
-                mod_offline:discard_warn_sender(Msgs);
-            true ->
-                if
-                    Len >= ?OFFLINE_TABLE_LOCK_THRESHOLD ->
-                        mnesia:write_lock_table(offline_msg);
-                    true ->
-                        ok
-                end,
-                lists:foreach(fun(M) -> mnesia:write(M) end, Msgs)
-        end
-    end,
-    transaction_no_result(F).
+    %Len = length(Msgs),
+    %F = fun() ->
+        %%% Only count messages if needed:
+        %Count =
+            %if MaxOfflineMsgs =/= infinity ->
+                %Len + p1_mnesia:count_records(
+                    %offline_msg, 
+                    %#offline_msg{us=US, _='_'});
+            %true -> 
+                %0
+        %end,
+        %if
+            %Count > MaxOfflineMsgs ->
+                %mod_offline:discard_warn_sender(Msgs);
+            %true ->
+                %if
+                    %Len >= ?OFFLINE_TABLE_LOCK_THRESHOLD ->
+                        %mnesia:write_lock_table(offline_msg);
+                    %true ->
+                        %ok
+                %end,
+                %lists:foreach(fun(M) -> mnesia:write(M) end, Msgs)
+        %end
+    %end,
+    %transaction_no_result(F).
+    ok.
 
 %% Opts may include:
 %% - dirty | {dirty, true | false} - the read will (or will not) be done

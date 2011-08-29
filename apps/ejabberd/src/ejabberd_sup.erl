@@ -191,6 +191,13 @@ init([]) ->
          infinity,
          supervisor,
          [cache_tab_sup]},
+    RiakClientSup =
+        {riak_client_sup,
+         {ejabberd_riak_sup, start_link, []},
+         permanent,
+         infinity,
+         supervisor,
+         [cache_tab_sup]},
 
     {ok, {{one_for_one, 10, 1},
           [Randoms,
@@ -213,6 +220,5 @@ init([]) ->
            STUNSupervisor,
            FrontendSocketSupervisor,
            CacheTabSupervisor,
+           RiakClientSup,
            Listener]}}.
-
-
