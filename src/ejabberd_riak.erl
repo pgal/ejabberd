@@ -52,7 +52,7 @@ delete(Bucket, Key) ->
 list_keys(Bucket) ->
     case riakc_pb_socket:list_keys(get_worker(), Bucket) of
         {ok, BinKeys} ->
-            lists:map(fun erlang:binary_to_term/1, BinKeys).
+            lists:map(fun erlang:binary_to_term/1, BinKeys);
         Error ->
             Error
     end.
@@ -71,9 +71,29 @@ get_timeout() ->
     get_config(riak_initial_connection_timeout, 10).
 
 get_config(Key, Default) ->
-    case ejabberd_config:get_local_config() of
+    case ejabberd_config:get_local_option({Key, ?MYNAME}) of
         undefined ->
             Default;
         Value ->
             Value
+    end.
+
+get_worker() ->
+    ejabberd_riak_sup:get_worker().
+
+-spec connect(string(), integer()) -> {ok, pid()} | {error, term()}.
+connect(Host, Port) ->
+    random:seed(now()),
+    connect(Host, Port, 10, get_timeout()).
+
+-spec connect(string(), integer(), integer(), integer()) -> {ok, pid()} | {error, term()}.
+connect(Host, Port, 0, _) ->
+    riakc_pb_socket:start_link(Host, Port);
+connect(Host, Port, Retries, WaitTime) ->
+    case riakc_pb_socket:start_link(Host, Port) of
+        {ok, Pid} ->
+            {ok, Pid};
+        _Else ->
+            timer:sleep(WaitTime+random:uniform(WaitTime)),
+            connect(Host, Port, Retries-1, WaitTime*2)
     end.
