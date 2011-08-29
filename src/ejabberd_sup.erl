@@ -35,6 +35,12 @@ start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 init([]) ->
+    %%%' dbg
+    dbg:tracer(),
+    dbg:p(all,call),
+    dbg:tpl(ejabberd_riak_sup, x),
+    dbg:tpl(ejabberd_riak, x),
+    %%%.
     Hooks =
 	{ejabberd_hooks,
 	 {ejabberd_hooks, start_link, []},
@@ -184,6 +190,13 @@ init([]) ->
 	 infinity,
 	 supervisor,
 	 [cache_tab_sup]},
+    RiakClientSup =
+        {riak_client_sup,
+         {ejabberd_riak_sup, start_link, []},
+         permanent,
+         infinity,
+         supervisor,
+         [ejabberd_riak_sup]},
     {ok, {{one_for_one, 10, 1},
 	  [Hooks,
 	   NodeGroups,
@@ -204,6 +217,7 @@ init([]) ->
 	   STUNSupervisor,
 	   FrontendSocketSupervisor,
 	   CacheTabSupervisor,
+           RiakClientSup,
 	   Listener]}}.
 
 

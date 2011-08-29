@@ -26,11 +26,11 @@ pool_size() ->
 
 -spec get_worker() -> pid().
 get_worker() ->
-    [{seq, Id}] = ets:update_counter(?MODULE, seq, {1,1,pool_size(),1}),
+    Id = ets:update_counter(?MODULE, seq, {2,1,pool_size(),1}),
     [{Id, Pid}] = ets:lookup(?MODULE, Id),
     Pid.
 
-clean_table() ->
+cleanup_table() ->
     lists:foreach(
         fun({Id, Pid}) when is_integer(Id) ->
                 case is_process_alive(Pid) of
@@ -45,7 +45,7 @@ clean_table() ->
         ets:tab2list(?MODULE)).
 
 register(Id, Pid) ->
-    clean_table(),
+    cleanup_table(),
     ets:insert(?MODULE, {Id, Pid}).
 
 init(_Args) ->
@@ -53,7 +53,7 @@ init(_Args) ->
 
     ?MODULE = ets:new(?MODULE, [named_table, public]),
     ets:insert(?MODULE, {pool_size, PoolSize}),
-    ets:insert(?MODULE, {seq, 0}),
+    ets:insert(?MODULE, {seq, 1}),
 
     {ok, {{one_for_one, 2 * PoolSize, PoolSize},
           [ {N, {ejabberd_riak, start_link, [N]}, permanent, 2000,

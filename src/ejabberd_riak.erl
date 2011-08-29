@@ -62,7 +62,7 @@ mapred_bucket(Bucket, Query) ->
     riakc_pb_socket:mapred_bucket(get_worker(), Bucket, Query).
 
 get_host() ->
-    get_config(riak_host, "localhost").
+    get_config(riak_host, "127.0.0.1").
 
 get_port() ->
     get_config(riak_port, 8087).
