@@ -59,12 +59,7 @@ negative_presence_no_mod_offline(Config) ->
         escalus_assert:is_chat_message(Msg,
             escalus_client:wait_for_stanza(Jane)),
 
-        %% set negative presence
-        NegativePresence = prioritized_presence(available, -1),
-        escalus_client:send(Jane, NegativePresence),
-        %escalus_utils:log_stanzas("Negative presence", [NegativePresence]),
-        escalus_assert:is_presence_stanza(
-            escalus_client:wait_for_stanza(Jane)),
+        set_negative_presence(Jane),
 
         %% chat again
         escalus_client:send(Mary, chat_to_jid(BareJane, Msg)),
@@ -100,12 +95,7 @@ negative_presence(Config) ->
         escalus_assert:is_chat_message(Msg,
             escalus_client:wait_for_stanza(Jane)),
 
-        %% set negative presence
-        NegativePresence = prioritized_presence(available, -1),
-        escalus_client:send(Jane, NegativePresence),
-        %escalus_utils:log_stanzas("Negative presence", [NegativePresence]),
-        escalus_assert:is_presence_stanza(
-            escalus_client:wait_for_stanza(Jane)),
+        set_negative_presence(Jane),
 
         %% Jane should not receive message
         escalus_client:send(Mary, chat_to_jid(BareJane, Msg)),
@@ -114,8 +104,7 @@ negative_presence(Config) ->
 
         %% set non-negative presence
         timer:sleep(500),
-        escalus_client:send(Jane, escalus_stanza:presence(available)),
-        escalus_assert:is_presence_stanza(escalus_client:wait_for_stanza(Jane)),
+        set_available(Jane),
 
         %% Mary should not receive anything
         escalus_assert:has_no_stanzas(Mary),
@@ -131,18 +120,18 @@ negative_presence(Config) ->
 load_data(Config) ->
     escalus:story(Config, [1, 1], fun(Mary, Jane) ->
 
+        UselessPresence1 = escalus_client:wait_for_stanza(Jane),
+        escalus_utils:log_stanzas("Should be presence", [UselessPresence1]),
+        UselessPresence2 = escalus_client:wait_for_stanza(Mary),
+        escalus_utils:log_stanzas("Should be presence", [UselessPresence2]),
+
         Msg = "Hi, Jane!",
         BareJane = bare_jid(Jane),
         escalus_client:send(Mary, chat_to_jid(BareJane, Msg)),
         escalus_assert:is_chat_message(Msg,
             escalus_client:wait_for_stanza(Jane)),
 
-        %% set negative presence
-        NegativePresence = prioritized_presence(available, -1),
-        escalus_client:send(Jane, NegativePresence),
-        %escalus_utils:log_stanzas("Negative presence", [NegativePresence]),
-        escalus_assert:is_presence_stanza(
-            escalus_client:wait_for_stanza(Jane)),
+        set_negative_presence(Jane),
 
         %% Jane should not receive message
         escalus_client:send(Mary, chat_to_jid(BareJane, Msg)),
@@ -153,6 +142,18 @@ load_data(Config) ->
 %%-----------------------------------------------------------------
 %% Helpers
 %%-----------------------------------------------------------------
+
+set_negative_presence(Client) ->
+    NegativePresence = prioritized_presence(available, -1),
+    escalus_client:send(Client, NegativePresence),
+    %escalus_utils:log_stanzas("Negative presence", [NegativePresence]),
+    escalus_assert:is_presence_stanza(
+        escalus_client:wait_for_stanza(Client)).
+
+set_available(Client) ->
+    escalus_client:send(Client, escalus_stanza:presence(available)),
+    escalus_assert:is_presence_stanza(
+        escalus_client:wait_for_stanza(Client)).
 
 bare_jid(Client) ->
     hd(string:tokens(binary_to_list(Client#client.jid), "/")).
