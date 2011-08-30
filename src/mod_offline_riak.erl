@@ -4,10 +4,22 @@
 
 -include("mod_offline.hrl").
 
+-define(OFFLINE_BUCKET, <<"offline_msg">>).
+
 %% TODO: adjust for binary-/string-only versions
 -type string_type() :: binary() | string().
 -type user() :: {string_type(), string_type()}.
 -type time() :: {integer(), integer(), integer()}.
+
+get_messages(US) ->
+    case ejabberd_riak:get(?OFFLINE_BUCKET, US) of
+        {error, notfound} ->
+            [];
+        {error, _} = Error ->
+            Error;
+        SomeMsgs ->
+            SomeMsgs
+    end.
 
 create_table() ->
     ok.
@@ -15,32 +27,17 @@ create_table() ->
 -spec store_offline_messages(user(), list(), infinity | integer())
     -> ok | {error, any()}.
 store_offline_messages(US, Msgs, MaxOfflineMsgs) ->
-    %Len = length(Msgs),
-    %F = fun() ->
-        %%% Only count messages if needed:
-        %Count =
-            %if MaxOfflineMsgs =/= infinity ->
-                %Len + p1_mnesia:count_records(
-                    %offline_msg, 
-                    %#offline_msg{us=US, _='_'});
-            %true -> 
-                %0
-        %end,
-        %if
-            %Count > MaxOfflineMsgs ->
-                %mod_offline:discard_warn_sender(Msgs);
-            %true ->
-                %if
-                    %Len >= ?OFFLINE_TABLE_LOCK_THRESHOLD ->
-                        %mnesia:write_lock_table(offline_msg);
-                    %true ->
-                        %ok
-                %end,
-                %lists:foreach(fun(M) -> mnesia:write(M) end, Msgs)
-        %end
-    %end,
-    %transaction_no_result(F).
-    ok.
+    OldMsgs = get_messages(US),
+    NewMsgs = lists:ukeysort(#offline_msg.timestamp,
+        OldMsgs ++ Msgs),
+    Len = length(NewMsgs),
+    if
+        MaxOfflineMsgs =/= infinity andalso Len > MaxOfflineMsgs ->
+            mod_offline:discard_warn_sender(Msgs),
+            ok;
+        true ->
+            ejabberd_riak:set(?OFFLINE_BUCKET, US, NewMsgs)
+    end.
 
 %% Opts may include:
 %% - dirty | {dirty, true | false} - the read will (or will not) be done
@@ -52,21 +49,17 @@ store_offline_messages(US, Msgs, MaxOfflineMsgs) ->
     |   {ok, Messages :: list()}
     |   {error, any()}.
 load_offline_messages(US, Opts) ->
-    case proplists:get_value(dirty, Opts, false) of
-        true ->
-            mnesia:dirty_read({offline_msg, US});
-        false ->
-            F = fun() ->
-                Rs = mnesia:wread({offline_msg, US}),
-                mnesia:delete({offline_msg, US}),
-                Rs
-            end,
-            case mnesia:transaction(F) of
-                {atomic, Messages} ->
-                    {ok, Messages};
-                Error ->
-                    {error, Error}
-            end
+    case get_messages(US) of
+        {ok, Msgs} ->
+            case proplists:get_value(dirty, Opts, false) of
+                true ->
+                    Msgs;
+                false ->
+                    ejabberd_riak:delete(?OFFLINE_BUCKET, US),
+                    {ok, Msgs}
+            end;
+        Error ->
+            Error
     end.
 
 -spec remove_expired_messages(time()) -> ok | {error, any()}.
