@@ -13,12 +13,12 @@
 
 get_messages(US) ->
     case ejabberd_riak:get(?OFFLINE_BUCKET, US) of
+        {ok, Msgs} ->
+            {ok, Msgs};
         {error, notfound} ->
-            [];
-        {error, _} = Error ->
-            Error;
-        SomeMsgs ->
-            SomeMsgs
+            {ok, []};
+        Error ->
+            Error
     end.
 
 create_table() ->
@@ -27,7 +27,7 @@ create_table() ->
 -spec store_offline_messages(user(), list(), infinity | integer())
     -> ok | {error, any()}.
 store_offline_messages(US, Msgs, MaxOfflineMsgs) ->
-    OldMsgs = get_messages(US),
+    {ok, OldMsgs} = get_messages(US),
     NewMsgs = lists:ukeysort(#offline_msg.timestamp,
         OldMsgs ++ Msgs),
     Len = length(NewMsgs),
