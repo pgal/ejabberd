@@ -1,0 +1,110 @@
+# Phase 1
+
+## Run 1
+
+Settings:
+
+    -define(VERIFICATION_REPEATS, 100).
+    -define(SENDER_RUNS, 10).
+    -define(RECEIVER_RUNS, ?SENDER_RUNS * 4).
+    -define(SLEEPINESS, 20).
+
+Backend: mnesia
+
+Result: 153 ok, 6 failed, 3 skipped of 162 test cases
+
+## Run 2
+
+Backend: riak
+
+Result: 285 ok, 15 failed of 300 test cases
+
+## Run 3
+
+Backend: mnesia
+
+Result: 296 ok, 4 failed of 300 test cases
+
+# Phase 2
+
+Less verifications, longer sender series than in Phase 1.
+
+Settings:
+
+    -define(VERIFICATION_REPEATS, 20).
+    -define(SENDER_RUNS, 20).
+    -define(RECEIVER_RUNS, ?SENDER_RUNS * 4).
+    -define(SLEEPINESS, 20).
+
+## Run 1
+
+Backend: mnesia
+
+Result: 58 ok, 2 failed of 60 test cases
+
+Trace:
+
+    - - - - - - - - - - - - - - - - - - - - - - - - - -
+    offline_SUITE:leakage_receiver failed on line 225
+    Reason: timeout
+    - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    Testing test.suites.offline_SUITE.leakage: *** FAILED *** test case 2
+
+    =INFO REPORT==== 12-Sep-2011::14:30:28 ===
+    sent: 20
+    received_offline: 0
+    received_online: 0
+
+    - - - - - - - - - - - - - - - - - - - - - - - - - -
+    offline_SUITE:verify_none_leaked failed on line 237
+    Reason: {badmatch,0}
+    - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+## Run 2
+
+Backend: riak
+
+Result: 60 ok, 0 failed of 60 test cases
+
+# Phase 3
+
+Settings:
+
+    -define(VERIFICATION_REPEATS, 20).
+    -define(SENDER_RUNS, 80).
+    -define(RECEIVER_RUNS, ?SENDER_RUNS * 4).
+    -define(SLEEPINESS, 20).
+
+## Run 1
+
+Backend: mnesia
+
+Result: 
+
+## Run 2
+
+Backend: riak
+
+Result: 58 ok, 2 failed of 60 test cases
+
+Trace:
+
+    - - - - - - - - - - - - - - - - - - - - - - - - - -
+    offline_SUITE:leakage_receiver failed on line 225
+    Reason: timeout
+    - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    Testing test.suites.offline_SUITE.leakage: *** FAILED *** test case 50
+
+    - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    =INFO REPORT==== 12-Sep-2011::14:43:51 ===
+    sent: 80
+    received_offline: 0
+    received_online: 0
+    offline_SUITE:verify_none_leaked failed on line 237
+    Reason: {badmatch,0}
+    - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    Testing test.suites.offline_SUITE.leakage: *** FAILED *** test case 51

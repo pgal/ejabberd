@@ -29,12 +29,16 @@ ct() ->
         %, {testcase, block_jid_all}
 
         , {suite, "offline_SUITE"}
-        , {group, [presence]}
+
+        %, {group, [presence]}
         %% with repeat_until_any_ok single test runs fail,
         %% so launch entire group
         %, {testcase, negative_presence_no_mod_offline}
         %, {testcase, negative_presence}
+
         %, {group, [load]}
         %, {testcase, load_data}
+
+        , {group, [leakage]}
     ]),
     init:stop(0).
