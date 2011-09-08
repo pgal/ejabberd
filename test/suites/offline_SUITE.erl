@@ -88,6 +88,12 @@ end_per_group(leakage_parallel, Config) ->
 end_per_group(_GroupName, Config) ->
     escalus:delete_users(Config).
 
+init_per_testcase(negative_presence_no_mod_offline = CaseName, Config) ->
+    escalus_ejabberd:rpc(mod_offline, clear_table, []),
+    escalus:init_per_testcase(CaseName, Config);
+init_per_testcase(negative_presence = CaseName, Config) ->
+    escalus_ejabberd:rpc(mod_offline, clear_table, []),
+    escalus:init_per_testcase(CaseName, Config);
 init_per_testcase(leakage_sender = CaseName, Config) ->
     escalus_ejabberd:rpc(mod_offline, clear_table, []),
     escalus:init_per_testcase(CaseName,
