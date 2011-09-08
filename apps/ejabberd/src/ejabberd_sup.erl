@@ -197,7 +197,7 @@ init([]) ->
          permanent,
          infinity,
          supervisor,
-         [cache_tab_sup]},
+         [ejabberd_riak_sup]},
 
     {ok, {{one_for_one, 10, 1},
           [Randoms,
