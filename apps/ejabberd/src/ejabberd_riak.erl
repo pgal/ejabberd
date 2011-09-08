@@ -4,6 +4,7 @@
 -export([start_link/1,
          get/2,
          set/3,
+         delete/1,
          delete/2,
          list_keys/1,
          mapred_bucket/2]).
@@ -44,6 +45,21 @@ set(Bucket, Key, Value) ->
             Else
     end.
 
+%% Delete whole bucket.
+%% TODO: I feel it's far from elegant.
+-spec delete(binary()) -> ok | {error, any()}.
+delete(Bucket) ->
+    case riakc_pb_socket:list_keys(get_worker(), Bucket) of
+        {ok, BinKeys} ->
+            lists:foreach(
+                fun(Key) ->
+                    riakc_pb_socket:delete(get_worker(), Bucket, Key) end,
+                BinKeys);
+        Error ->
+            Error
+    end.
+
+%% Delete object by key.
 -spec delete(binary(), term()) -> ok | {error, any()}.
 delete(Bucket, Key) ->
     riakc_pb_socket:delete(get_worker(), Bucket, term_to_binary(Key)).

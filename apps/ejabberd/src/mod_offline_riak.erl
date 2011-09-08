@@ -14,6 +14,9 @@
 create_table() ->
     ok.
 
+clear_table() ->
+    ejabberd_riak:delete(?OFFLINE_BUCKET).
+
 -spec store_offline_messages(user(), list(), infinity | integer())
     -> ok | {error, any()}.
 store_offline_messages(US, Msgs, MaxOfflineMsgs) ->

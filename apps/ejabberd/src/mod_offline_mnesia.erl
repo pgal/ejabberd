@@ -18,6 +18,9 @@ create_table() ->
             {attributes, record_info(fields, offline_msg)}]),
     update_table().
 
+clear_table() ->
+    mnesia:clear_table(offline_msg).
+
 -spec store_offline_messages(user(), list(), infinity | integer())
     -> ok | {error, any()}.
 store_offline_messages(US, Msgs, MaxOfflineMsgs) ->
@@ -31,7 +34,7 @@ store_offline_messages(US, Msgs, MaxOfflineMsgs) ->
                     #offline_msg{us=US, _='_'});
             true -> 
                 0
-        end,
+            end,
         if
             Count > MaxOfflineMsgs ->
                 mod_offline:discard_warn_sender(Msgs);

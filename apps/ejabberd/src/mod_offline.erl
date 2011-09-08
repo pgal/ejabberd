@@ -49,6 +49,8 @@
          webadmin_user/4,
          webadmin_user_parse_query/5]).
 
+-export([clear_table/0]).
+
 -include("mod_offline.hrl").
 -include("web/ejabberd_http.hrl").
 -include("web/ejabberd_web_admin.hrl").
@@ -111,6 +113,9 @@ loop(AccessMaxOfflineMsgs) ->
 
 create_table() ->
     ?DISPATCH(create_table, []).
+
+clear_table() ->
+    ?DISPATCH(clear_table, []).
 
 store_offline_messages(US, Msgs, MaxOfflineMsgs) ->
     ?DISPATCH(store_offline_messages, [US, Msgs, MaxOfflineMsgs]).
