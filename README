@@ -1,7 +1,18 @@
-ejabberd - High-Performance Enterprise Instant Messaging Server 
+ejabberd - High-Performance Enterprise Instant Messaging Server
 
-Quickstart guide
+# lavrin/ejabberd
 
+This github fork (lavrin/ejabberd) aims at two targets:
+ - refactoring ejabberd code in order to avoid code duplication between
+   same modules using different backends (e.g. mod_offline vs.
+   mod_offline_odbc).
+ - experimentally plucking in riak in place of the current database
+   backends.
+
+The base chosen for these enhancements is ejabberd v.2.1.8, i.e. the last
+version from branch 2.x.
+
+# Quickstart guide
 
 0. Requirements
 
