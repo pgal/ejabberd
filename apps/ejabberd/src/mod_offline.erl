@@ -44,16 +44,17 @@
          remove_expired_messages/0,
          remove_old_messages/1,
          remove_user/2,
-         get_queue_length/2,
-         webadmin_page/3,
-         webadmin_user/4,
-         webadmin_user_parse_query/5]).
+         get_queue_length/2 %,
+         %webadmin_page/3,
+         %webadmin_user/4,
+         %webadmin_user_parse_query/5
+        ]).
 
 -export([clear_table/0]).
 
 -include("mod_offline.hrl").
--include("web/ejabberd_http.hrl").
--include("web/ejabberd_web_admin.hrl").
+%-include("web/ejabberd_http.hrl").
+%-include("web/ejabberd_web_admin.hrl").
 
 -define(PROCNAME, ejabberd_offline).
 
@@ -404,145 +405,145 @@ discard_warn_sender(Msgs) ->
         end, Msgs).
 
 
-webadmin_page(_, Host,
-    #request{us = _US,
-        path = ["user", U, "queue"],
-        q = Query,
-        lang = Lang} = _Request) ->
-    Res = user_queue(U, Host, Query, Lang),
-    {stop, Res};
+%webadmin_page(_, Host,
+    %#request{us = _US,
+        %path = ["user", U, "queue"],
+        %q = Query,
+        %lang = Lang} = _Request) ->
+    %Res = user_queue(U, Host, Query, Lang),
+    %{stop, Res};
 
-webadmin_page(Acc, _, _) -> Acc.
+%webadmin_page(Acc, _, _) -> Acc.
 
-user_queue(User, Server, Query, Lang) ->
-    US = {jlib:nodeprep(User), jlib:nameprep(Server)},
-    Res = user_queue_parse_query(US, Query),
-    MsgsAll = lists:keysort(#offline_msg.timestamp,
-        load_offline_messages(US, [dirty])),
-    Msgs = get_messages_subset(User, Server, MsgsAll),
-    FMsgs =
-    lists:map(
-        fun(#offline_msg{timestamp = TimeStamp, from = From, to = To,
-                    packet = {xmlelement, Name, Attrs, Els}} = Msg) ->
-                ID = jlib:encode_base64(binary_to_list(term_to_binary(Msg))),
-                {{Year, Month, Day}, {Hour, Minute, Second}} =
-                calendar:now_to_local_time(TimeStamp),
-                Time = lists:flatten(
-                    io_lib:format(
-                        "~w-~.2.0w-~.2.0w ~.2.0w:~.2.0w:~.2.0w",
-                        [Year, Month, Day, Hour, Minute, Second])),
-                SFrom = jlib:jid_to_string(From),
-                STo = jlib:jid_to_string(To),
-                Attrs2 = jlib:replace_from_to_attrs(SFrom, STo, Attrs),
-                Packet = {xmlelement, Name, Attrs2, Els},
-                FPacket = ejabberd_web_admin:pretty_print_xml(Packet),
-                ?XE("tr",
-                    [?XAE("td", [{"class", "valign"}], [?INPUT("checkbox", "selected", ID)]),
-                     ?XAC("td", [{"class", "valign"}], Time),
-                     ?XAC("td", [{"class", "valign"}], SFrom),
-                     ?XAC("td", [{"class", "valign"}], STo),
-                     ?XAE("td", [{"class", "valign"}], [?XC("pre", FPacket)])]
-                )
-        end, Msgs),
-    [?XC("h1", io_lib:format(?T("~s's Offline Messages Queue"),
-                [us_to_list(US)]))] ++
-    case Res of
-        ok -> [?XREST("Submitted")];
-        nothing -> []
-    end ++
-    [?XAE("form", [{"action", ""}, {"method", "post"}],
-            [?XE("table",
-                    [?XE("thead",
-                            [?XE("tr",
-                                    [?X("td"),
-                                     ?XCT("td", "Time"),
-                                     ?XCT("td", "From"),
-                                     ?XCT("td", "To"),
-                                     ?XCT("td", "Packet")
-                                    ])]),
-                        ?XE("tbody",
-                            if
-                                FMsgs == [] ->
-                                    [?XE("tr",
-                                            [?XAC("td", [{"colspan", "4"}], " ")]
-                                        )];
-                                true ->
-                                    FMsgs
-                            end
-                        )]),
-                ?BR,
-                ?INPUTT("submit", "delete", "Delete Selected")
-            ])].
+%user_queue(User, Server, Query, Lang) ->
+    %US = {jlib:nodeprep(User), jlib:nameprep(Server)},
+    %Res = user_queue_parse_query(US, Query),
+    %MsgsAll = lists:keysort(#offline_msg.timestamp,
+        %load_offline_messages(US, [dirty])),
+    %Msgs = get_messages_subset(User, Server, MsgsAll),
+    %FMsgs =
+    %lists:map(
+        %fun(#offline_msg{timestamp = TimeStamp, from = From, to = To,
+                    %packet = {xmlelement, Name, Attrs, Els}} = Msg) ->
+                %ID = jlib:encode_base64(binary_to_list(term_to_binary(Msg))),
+                %{{Year, Month, Day}, {Hour, Minute, Second}} =
+                %calendar:now_to_local_time(TimeStamp),
+                %Time = lists:flatten(
+                    %io_lib:format(
+                        %"~w-~.2.0w-~.2.0w ~.2.0w:~.2.0w:~.2.0w",
+                        %[Year, Month, Day, Hour, Minute, Second])),
+                %SFrom = jlib:jid_to_string(From),
+                %STo = jlib:jid_to_string(To),
+                %Attrs2 = jlib:replace_from_to_attrs(SFrom, STo, Attrs),
+                %Packet = {xmlelement, Name, Attrs2, Els},
+                %FPacket = ejabberd_web_admin:pretty_print_xml(Packet),
+                %?XE("tr",
+                    %[?XAE("td", [{"class", "valign"}], [?INPUT("checkbox", "selected", ID)]),
+                     %?XAC("td", [{"class", "valign"}], Time),
+                     %?XAC("td", [{"class", "valign"}], SFrom),
+                     %?XAC("td", [{"class", "valign"}], STo),
+                     %?XAE("td", [{"class", "valign"}], [?XC("pre", FPacket)])]
+                %)
+        %end, Msgs),
+    %[?XC("h1", io_lib:format(?T("~s's Offline Messages Queue"),
+                %[us_to_list(US)]))] ++
+    %case Res of
+        %ok -> [?XREST("Submitted")];
+        %nothing -> []
+    %end ++
+    %[?XAE("form", [{"action", ""}, {"method", "post"}],
+            %[?XE("table",
+                    %[?XE("thead",
+                            %[?XE("tr",
+                                    %[?X("td"),
+                                     %?XCT("td", "Time"),
+                                     %?XCT("td", "From"),
+                                     %?XCT("td", "To"),
+                                     %?XCT("td", "Packet")
+                                    %])]),
+                        %?XE("tbody",
+                            %if
+                                %FMsgs == [] ->
+                                    %[?XE("tr",
+                                            %[?XAC("td", [{"colspan", "4"}], " ")]
+                                        %)];
+                                %true ->
+                                    %FMsgs
+                            %end
+                        %)]),
+                %?BR,
+                %?INPUTT("submit", "delete", "Delete Selected")
+            %])].
 
-user_queue_parse_query(_US, Query) ->
-    case lists:keysearch("delete", 1, Query) of
-        {value, _} ->
-            MsgsToDelete = lists:foldl(
-                fun({"selected", ID}, Acc) ->
-                        M = binary_to_term(
-                            list_to_binary(jlib:decode_base64(ID))),
-                        [M | Acc];
-                   (_, Acc) ->
-                        Acc
-                end, [], Query),
-            case delete_offline_messages(MsgsToDelete) of
-                ok ->
-                    ok;
-                {error, _Reason} ->
-                    ?WARNING_MSG("Deleting offline messages failed", []),
-                    ok
-            end;
-        false ->
-            nothing
-    end.
+%user_queue_parse_query(_US, Query) ->
+    %case lists:keysearch("delete", 1, Query) of
+        %{value, _} ->
+            %MsgsToDelete = lists:foldl(
+                %fun({"selected", ID}, Acc) ->
+                        %M = binary_to_term(
+                            %list_to_binary(jlib:decode_base64(ID))),
+                        %[M | Acc];
+                   %(_, Acc) ->
+                        %Acc
+                %end, [], Query),
+            %case delete_offline_messages(MsgsToDelete) of
+                %ok ->
+                    %ok;
+                %{error, _Reason} ->
+                    %?WARNING_MSG("Deleting offline messages failed", []),
+                    %ok
+            %end;
+        %false ->
+            %nothing
+    %end.
 
-us_to_list({User, Server}) ->
-    jlib:jid_to_string({User, Server, ""}).
+%us_to_list({User, Server}) ->
+    %jlib:jid_to_string({User, Server, ""}).
 
 get_queue_length(User, Server) ->
     length(load_offline_messages({User, Server}, [dirty])).
 
-get_messages_subset(User, Host, MsgsAll) ->
-    Access = gen_mod:get_module_opt(Host, ?MODULE, access_max_user_messages,
-        max_user_offline_messages),
-    MaxOfflineMsgs = case get_max_user_messages(Access, User, Host) of
-        Number when is_integer(Number) -> Number;
-        _ -> 100
-    end,
-    Length = length(MsgsAll),
-    get_messages_subset2(MaxOfflineMsgs, Length, MsgsAll).
+%get_messages_subset(User, Host, MsgsAll) ->
+    %Access = gen_mod:get_module_opt(Host, ?MODULE, access_max_user_messages,
+        %max_user_offline_messages),
+    %MaxOfflineMsgs = case get_max_user_messages(Access, User, Host) of
+        %Number when is_integer(Number) -> Number;
+        %_ -> 100
+    %end,
+    %Length = length(MsgsAll),
+    %get_messages_subset2(MaxOfflineMsgs, Length, MsgsAll).
 
-get_messages_subset2(Max, Length, MsgsAll) when Length =< Max*2 ->
-    MsgsAll;
-get_messages_subset2(Max, Length, MsgsAll) ->
-    FirstN = Max,
-    {MsgsFirstN, Msgs2} = lists:split(FirstN, MsgsAll),
-    MsgsLastN = lists:nthtail(Length - FirstN - FirstN, Msgs2),
-    NoJID = jlib:make_jid("...", "...", ""),
-    IntermediateMsg = #offline_msg{timestamp = now(), from = NoJID, to = NoJID,
-        packet = {xmlelement, "...", [], []}},
-    MsgsFirstN ++ [IntermediateMsg] ++ MsgsLastN.
+%get_messages_subset2(Max, Length, MsgsAll) when Length =< Max*2 ->
+    %MsgsAll;
+%get_messages_subset2(Max, Length, MsgsAll) ->
+    %FirstN = Max,
+    %{MsgsFirstN, Msgs2} = lists:split(FirstN, MsgsAll),
+    %MsgsLastN = lists:nthtail(Length - FirstN - FirstN, Msgs2),
+    %NoJID = jlib:make_jid("...", "...", ""),
+    %IntermediateMsg = #offline_msg{timestamp = now(), from = NoJID, to = NoJID,
+        %packet = {xmlelement, "...", [], []}},
+    %MsgsFirstN ++ [IntermediateMsg] ++ MsgsLastN.
 
-webadmin_user(Acc, User, Server, Lang) ->
-    QueueLen = get_queue_length(jlib:nodeprep(User), jlib:nameprep(Server)),
-    FQueueLen = [?AC("queue/",
-            integer_to_list(QueueLen))],
-    Acc ++ [?XCT("h3", "Offline Messages:")] ++ FQueueLen ++ [?C(" "), ?INPUTT("submit", "removealloffline", "Remove All Offline Messages")].
+%webadmin_user(Acc, User, Server, Lang) ->
+    %QueueLen = get_queue_length(jlib:nodeprep(User), jlib:nameprep(Server)),
+    %FQueueLen = [?AC("queue/",
+            %integer_to_list(QueueLen))],
+    %Acc ++ [?XCT("h3", "Offline Messages:")] ++ FQueueLen ++ [?C(" "), ?INPUTT("submit", "removealloffline", "Remove All Offline Messages")].
 
-webadmin_user_parse_query(_, "removealloffline", User, Server, _Query) ->
-    US = {User, Server},
-    %% TODO: Remove user vs. remove all user's messages? The same or not?
-    %%       Isn't it just the same as removing a user?
-    %%       In both cases all his messages disappear.
-    %%       Though it may be backend-specific.
-    MsgsToDelete = load_offline_messages(US, [dirty]),
-    case delete_offline_messages(MsgsToDelete, [write_lock]) of
-        ok ->
-            ?INFO_MSG("Removed all offline messages for ~s@~s", [User, Server]),
-            {stop, ok};
-        {error, Reason} ->
-            ?ERROR_MSG("Failed to remove offline messages: ~p", [Reason]),
-            {stop, error}
-    end;
-webadmin_user_parse_query(Acc, _Action, _User, _Server, _Query) ->
-    Acc.
+%webadmin_user_parse_query(_, "removealloffline", User, Server, _Query) ->
+    %US = {User, Server},
+    %%% TODO: Remove user vs. remove all user's messages? The same or not?
+    %%%       Isn't it just the same as removing a user?
+    %%%       In both cases all his messages disappear.
+    %%%       Though it may be backend-specific.
+    %MsgsToDelete = load_offline_messages(US, [dirty]),
+    %case delete_offline_messages(MsgsToDelete, [write_lock]) of
+        %ok ->
+            %?INFO_MSG("Removed all offline messages for ~s@~s", [User, Server]),
+            %{stop, ok};
+        %{error, Reason} ->
+            %?ERROR_MSG("Failed to remove offline messages: ~p", [Reason]),
+            %{stop, error}
+    %end;
+%webadmin_user_parse_query(Acc, _Action, _User, _Server, _Query) ->
+    %Acc.
