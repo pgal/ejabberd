@@ -1,0 +1,21 @@
+# ejabberd/riak
+
+This fork (lavrin/ejabberd) aims at two targets:
+
+- refactoring ejabberd code in order to avoid code duplication between
+  same modules using different backends (e.g. `mod_offline` vs.
+  `mod_offline_odbc`),
+- experimentally plucking in riak in place of the current database
+  backends.
+
+The base chosen for these enhancements is ejabberd v.2.1.8, i.e. the latest
+(as of writing this) tagged version from branch 2.x.
+
+The vanilla ejabberd v.2.1.8 readme file is available as README.old.
+
+The layout of this repository was changed from the vanilla ejabberd
+to rebar and OTP compliant. It was done by merging with branch
+`ejd_otp_clean` of fork at http://github.com/esl/ejabberd. This change was
+made to simplify (for me, of course ;) building and deploying in testing
+environment. However, the changes made to support Riak should be fairly
+easily portable to vanilla ejabberd.
