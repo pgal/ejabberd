@@ -140,16 +140,6 @@ negative_presence_no_mod_offline(Config) ->
 negative_presence(Config) ->
     escalus:story(Config, [1, 1], fun(Mary, Jane) ->
 
-        %% No idea why, but when mod_offline is loaded more presences fly
-        %% around. Maybe more than usual are sent, maybe they just aren't
-        %% caught by escalus:story - I don't know.
-        %% EDIT: This is even stranger. After changing the running
-        %% discipline for the test group, these stanzas seem to disappear.
-        %UselessPresence1 = escalus_client:wait_for_stanza(Jane),
-        %escalus_utils:log_stanzas("Should be presence", [UselessPresence1]),
-        %UselessPresence2 = escalus_client:wait_for_stanza(Mary),
-        %escalus_utils:log_stanzas("Should be presence", [UselessPresence2]),
-
         Msg = "Hi, Jane!",
         BareJane = bare_jid(Jane),
         escalus_client:send(Mary, chat_to_jid(BareJane, Msg)),
@@ -199,11 +189,6 @@ load_data(Config) ->
         erlang:halt()
 
         end).
-
-%% TODO:
-%% - leakage_sender
-%% - leakage_receiver
-%% - verify_none_leaked
 
 leakage_sender() -> [{require, {escalus_users, mary}},
                      {require, {escalus_users, jane}}].
