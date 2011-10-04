@@ -1,6 +1,6 @@
 [submodule "test/escalus"]
 	path = test/escalus
     url = https://github.com/lavrin/escalus
-[submodule "deps/riak-erlang-client"]
-	path = deps/riak-erlang-client
+[submodule "apps/riakc"]
+	path = apps/riakc
 	url = https://github.com/basho/riak-erlang-client
