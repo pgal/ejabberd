@@ -120,6 +120,7 @@
              mod_register_riak,
              mod_register_web,
              mod_roster,
+             mod_roster_mnesia,
              mod_roster_odbc,
              mod_service_log,
              mod_shared_roster,
