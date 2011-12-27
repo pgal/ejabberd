@@ -45,19 +45,23 @@ set(Bucket, Key, Value) ->
             Else
     end.
 
+%% Perform operation for each key in bucket.
+%% F = fun(RiakWorker::pid(), BinaryKey::binary()).
+-spec foreach(binary(), fun()) -> ok | {error, any()}.
+foreach(Bucket, F) ->
+    case riakc_pb_socket:list_keys(get_worker(), Bucket) of
+        {ok, BinKeys} ->
+            lists:foreach(fun(Key) -> F(get_worker(), Key) end, BinKeys);
+        Error ->
+            Error
+    end.
+
 %% Delete whole bucket.
 %% TODO: I feel it's far from elegant.
 -spec delete(binary()) -> ok | {error, any()}.
 delete(Bucket) ->
-    case riakc_pb_socket:list_keys(get_worker(), Bucket) of
-        {ok, BinKeys} ->
-            lists:foreach(
-                fun(Key) ->
-                    riakc_pb_socket:delete(get_worker(), Bucket, Key) end,
-                BinKeys);
-        Error ->
-            Error
-    end.
+    foreach(Bucket,
+        fun(W, Key) -> riakc_pb_socket:delete(W, Bucket, Key) end).
 
 %% Delete object by key.
 -spec delete(binary(), term()) -> ok | {error, any()}.
