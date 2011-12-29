@@ -101,6 +101,9 @@ set_items_storage(LUser, LServer, Els) ->
 
 
 start(Host, Opts) ->
+    %% make DISPATCH macro valid, i.e. initialize module backend
+    ejabberd_backend:init(?MYNAME, ?MODULE),
+
     IQDisc = gen_mod:get_opt(iqdisc, Opts, one_queue),
 
 	create_table(),

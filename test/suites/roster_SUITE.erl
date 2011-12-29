@@ -1,5 +1,5 @@
--module(offline_SUITE).
--compile(export_all).
+-module(roster_SUITE).
+-compile([export_all]).
 
 -include_lib("escalus/include/escalus.hrl").
 -include_lib("common_test/include/ct.hrl").
@@ -7,11 +7,6 @@
 %%--------------------------------------------------------------------
 %% Suite configuration
 %%--------------------------------------------------------------------
-
--define(VERIFICATION_REPEATS, 20).
--define(SENDER_RUNS, 80).
--define(RECEIVER_RUNS, ?SENDER_RUNS * 4).
--define(SLEEPINESS, 20).
 
 all() ->
     [{group, presence}, %% Verifies whether negative presence priority
@@ -97,7 +92,7 @@ init_per_testcase(negative_presence = CaseName, Config) ->
 init_per_testcase(leakage_sender = CaseName, Config) ->
     escalus_ejabberd:rpc(mod_offline, clear_table, []),
     escalus:init_per_testcase(CaseName,
-        [fake_client(Config, bob) | Config]);
+        [fake_client(Config, jane) | Config]);
 init_per_testcase(leakage_receiver = CaseName, Config) ->
     escalus_ejabberd:rpc(mod_offline, clear_table, []),
     escalus:init_per_testcase(CaseName, Config);
@@ -112,56 +107,56 @@ end_per_testcase(CaseName, Config) ->
 %%--------------------------------------------------------------------
 
 negative_presence_no_mod_offline(Config) ->
-    escalus:story(Config, [1, 1], fun(Alice, Bob) ->
+    escalus:story(Config, [1, 1], fun(Mary, Jane) ->
 
-        Msg = "Hi, Bob!",
-        BareBob = bare_jid(Bob),
-        escalus_client:send(Alice, chat_to_jid(BareBob, Msg)),
+        Msg = "Hi, Jane!",
+        BareJane = bare_jid(Jane),
+        escalus_client:send(Mary, chat_to_jid(BareJane, Msg)),
         escalus_assert:is_chat_message(Msg,
-            escalus_client:wait_for_stanza(Bob)),
+            escalus_client:wait_for_stanza(Jane)),
 
-        set_negative_presence(Bob),
+        set_negative_presence(Jane),
 
         %% chat again
-        escalus_client:send(Alice, chat_to_jid(BareBob, Msg)),
+        escalus_client:send(Mary, chat_to_jid(BareJane, Msg)),
 
-        %% Alice should receive service-unavailable
-        Error = escalus_client:wait_for_stanza(Alice),
+        %% Mary should receive service-unavailable
+        Error = escalus_client:wait_for_stanza(Mary),
         escalus_utils:log_stanzas("Should be service-unavailable", [Error]),
         escalus_assert:is_error(Error, <<"cancel">>,
             'service-unavailable'),
 
-        %% Bob should not receive message
+        %% Jane should not receive message
         timer:sleep(500),
-        escalus_assert:has_no_stanzas(Bob)
+        escalus_assert:has_no_stanzas(Jane)
 
         end).
 
 negative_presence(Config) ->
-    escalus:story(Config, [1, 1], fun(Alice, Bob) ->
+    escalus:story(Config, [1, 1], fun(Mary, Jane) ->
 
-        Msg = "Hi, Bob!",
-        BareBob = bare_jid(Bob),
-        escalus_client:send(Alice, chat_to_jid(BareBob, Msg)),
+        Msg = "Hi, Jane!",
+        BareJane = bare_jid(Jane),
+        escalus_client:send(Mary, chat_to_jid(BareJane, Msg)),
         escalus_assert:is_chat_message(Msg,
-            escalus_client:wait_for_stanza(Bob)),
+            escalus_client:wait_for_stanza(Jane)),
 
-        set_negative_presence(Bob),
+        set_negative_presence(Jane),
 
-        %% Bob should not receive message
-        escalus_client:send(Alice, chat_to_jid(BareBob, Msg)),
+        %% Jane should not receive message
+        escalus_client:send(Mary, chat_to_jid(BareJane, Msg)),
         timer:sleep(500),
-        escalus_assert:has_no_stanzas(Bob),
+        escalus_assert:has_no_stanzas(Jane),
 
         %% set non-negative presence
         timer:sleep(500),
-        set_available(Bob),
+        set_available(Jane),
 
-        %% Alice should not receive anything
-        escalus_assert:has_no_stanzas(Alice),
+        %% Mary should not receive anything
+        escalus_assert:has_no_stanzas(Mary),
 
-        %% Bob should receive delayed message
-        DelayedMessage = escalus_client:wait_for_stanza(Bob),
+        %% Jane should receive delayed message
+        DelayedMessage = escalus_client:wait_for_stanza(Jane),
         %escalus_utils:log_stanzas("Delayed message", [DelayedMessage]),
         escalus_assert:is_chat_message(Msg, DelayedMessage),
         true = is_delayed(DelayedMessage)
@@ -169,47 +164,47 @@ negative_presence(Config) ->
         end).
 
 load_data(Config) ->
-    escalus:story(Config, [1, 1], fun(Alice, Bob) ->
+    escalus:story(Config, [1, 1], fun(Mary, Jane) ->
 
-        %UselessPresence1 = escalus_client:wait_for_stanza(Bob),
-        %escalus_utils:log_stanzas("Should be presence", [UselessPresence1]),
-        %UselessPresence2 = escalus_client:wait_for_stanza(Alice),
-        %escalus_utils:log_stanzas("Should be presence", [UselessPresence2]),
+        UselessPresence1 = escalus_client:wait_for_stanza(Jane),
+        escalus_utils:log_stanzas("Should be presence", [UselessPresence1]),
+        UselessPresence2 = escalus_client:wait_for_stanza(Mary),
+        escalus_utils:log_stanzas("Should be presence", [UselessPresence2]),
 
-        Msg = "Hi, Bob!",
-        BareBob = bare_jid(Bob),
-        escalus_client:send(Alice, chat_to_jid(BareBob, Msg)),
+        Msg = "Hi, Jane!",
+        BareJane = bare_jid(Jane),
+        escalus_client:send(Mary, chat_to_jid(BareJane, Msg)),
         escalus_assert:is_chat_message(Msg,
-            escalus_client:wait_for_stanza(Bob)),
+            escalus_client:wait_for_stanza(Jane)),
 
-        set_negative_presence(Bob),
+        set_negative_presence(Jane),
 
-        %% Bob should not receive message
-        escalus_client:send(Alice, chat_to_jid(BareBob, Msg)),
+        %% Jane should not receive message
+        escalus_client:send(Mary, chat_to_jid(BareJane, Msg)),
         erlang:halt()
 
         end).
 
-leakage_sender() -> [{require, {escalus_users, alice}},
-                     {require, {escalus_users, bob}}].
+leakage_sender() -> [{require, {escalus_users, mary}},
+                     {require, {escalus_users, jane}}].
 
 leakage_sender(Config) ->
-    escalus:story(Config, [{alice,1}], fun(Alice) ->
+    escalus:story(Config, [{mary,1}], fun(Mary) ->
 
-        Bob = ?config(bob, Config),
+        Jane = ?config(jane, Config),
         %% ensure receiver has time to start first,
         %% as arriving messages crash escalus:story
         ?t:sleep(500),
-        sender_loop(Alice, Bob, ?SENDER_RUNS)
+        sender_loop(Mary, Jane, ?SENDER_RUNS)
 
         end).
 
-leakage_receiver() -> [{require, {escalus_users, bob}}].
+leakage_receiver() -> [{require, {escalus_users, jane}}].
 
 leakage_receiver(Config) ->
-    escalus:story(Config, [{bob,1}], fun(Bob) ->
+    escalus:story(Config, [{jane,1}], fun(Jane) ->
 
-        receiver_loop(Bob, ?RECEIVER_RUNS)
+        receiver_loop(Jane, ?RECEIVER_RUNS)
 
         end).
 

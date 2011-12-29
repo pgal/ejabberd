@@ -117,6 +117,7 @@
              mod_roster,
              mod_roster_mnesia,
              mod_roster_odbc,
+             mod_roster_riak,
              mod_service_log,
              mod_shared_roster,
              mod_shared_roster_ldap,
