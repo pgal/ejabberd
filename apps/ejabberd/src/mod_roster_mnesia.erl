@@ -39,6 +39,12 @@ write_to_storage(Rec, Opts) ->
 			mnesia:write(Rec)
     end.
 	
+write_to_roster_storage(Rec) ->
+    mnesia:write(Rec).
+	
+write_to_roster_version_storage(Rec) ->
+    mnesia:dirty_write(Rec).
+	
 read_user_roster(US) ->
 	mnesia:dirty_index_read(roster, US, #roster.us).
 
@@ -98,7 +104,12 @@ process_item_set_storage(Attrs, Els, User, JID, LUser, LServer, LJID) ->
 		{Item, Item3}
 	end,
     
-	mnesia:transaction(F).
+    case mnesia:transaction(F) of
+        {atomic, Result} ->
+            {ok, Result};
+        Error ->
+            {error, Error}
+    end.
 
 
 process_subscription_storage(Direction, Type, Reason, JID1, US, LUser, LServer, LJID) ->

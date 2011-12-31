@@ -38,6 +38,7 @@
 
 -behaviour(gen_mod).
 
+%% Interface
 -export([start/2, stop/1,
 	 process_iq/3,
 	 process_local_iq/3,
@@ -55,6 +56,14 @@
 	 get_versioning_feature/2,
 	 roster_versioning_enabled/1,
 	 roster_version/2]).
+
+%% Interface for mod_roster_* backends
+-export([process_item_attrs/2,
+	 process_item_els/2,
+	 process_item_set_t/3,
+	 out_state_change/3,
+	 in_auto_reply/3,
+	 in_state_change/3]).
 
 -include("ejabberd.hrl").
 -include("jlib.hrl").
@@ -74,11 +83,11 @@ remove_user_storage(US) ->
 read_roster_version_storage(US) ->
 	?DISPATCH(read_roster_version_storage, [US]).
 
-write_to_storage(Rec) ->
-	write_to_storage(Rec, []).
+write_to_roster_storage(Rec) ->
+	?DISPATCH(write_to_roster_storage, [Rec]).
 
-write_to_storage(Rec, Opts) ->
-	?DISPATCH(write_to_storage, [Rec, Opts]).
+write_to_roster_version_storage(Rec) ->
+	?DISPATCH(write_to_roster_version_storage, [Rec]).
 	
 read_user_roster(US) ->
 	?DISPATCH(read_user_roster, [US]).
@@ -213,7 +222,7 @@ get_versioning_feature(Acc, Host) ->
 	false -> []
     end.
 
-roster_version(LServer ,LUser) ->
+roster_version(LServer, LUser) ->
 	US = {LUser, LServer},
 	case roster_version_on_db(LServer) of
 		true ->
@@ -248,7 +257,7 @@ process_iq_get(From, To, #iq{sub_el = SubEl} = IQ) ->
 						ejabberd_hooks:run_fold(roster_get, To#jid.lserver, [], [US])), NewVersion};
 					[] ->
 						RosterVersion = sha:sha(term_to_binary(now())),
-						write_to_storage(#roster_version{us = US, version = RosterVersion}, [dirty]),
+						write_to_roster_version_storage(#roster_version{us = US, version = RosterVersion}),
 						{lists:map(fun item_to_xml/1,
 						ejabberd_hooks:run_fold(roster_get, To#jid.lserver, [], [US])), RosterVersion}
 				end;
@@ -327,7 +336,7 @@ process_item_set(From, To, {xmlelement, _Name, Attrs, Els}) ->
 	    JID = {JID1#jid.user, JID1#jid.server, JID1#jid.resource},
 	    LJID = jlib:jid_tolower(JID1),
 		case process_item_set_storage(Attrs, Els, User, JID, LUser, LServer, LJID) of
-			{atomic, {OldItem, Item}} ->
+			{ok, {OldItem, Item}} ->
 				push_item(User, LServer, To, Item),
 				case Item#roster.subscription of
 					remove ->
@@ -336,7 +345,7 @@ process_item_set(From, To, {xmlelement, _Name, Attrs, Els}) ->
 					_ ->
 						ok
 				end;
-			E ->
+			{error, E} ->
 				?DEBUG("ROSTER: roster item set error: ~p~n", [E]),
 				ok
 		end
@@ -481,7 +490,7 @@ process_subscription(Direction, User, Server, JID1, Type, Reason) ->
     LJID = jlib:jid_tolower(JID1),
     
     case process_subscription_storage(Direction, Type, Reason, JID1, US, LUser, LServer, LJID) of
-	{atomic, {Push, AutoReply}} ->
+	{ok, {Push, AutoReply}} ->
 	    case AutoReply of
 		none ->
 		    ok;
@@ -686,7 +695,7 @@ process_item_set_t(LUser, LServer, {xmlelement, _Name, Attrs, Els}) ->
 				remove ->
 					delete_item(LUser, LServer, LJID);
 				_ ->
-					write_to_storage(Item2)
+					write_to_roster_storage(Item2)
 			end
     end;
 process_item_set_t(_LUser, _LServer, _) ->

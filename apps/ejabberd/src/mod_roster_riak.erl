@@ -2,16 +2,26 @@
 
 -compile([export_all]).
 
+-include("jlib.hrl").
 -include("mod_roster.hrl").
 
--define(ROSTER_BUCKET, <<"offline_msg">>).
+-define(ROSTER_BUCKET, <<"roster">>).
+-define(ROSTER_VERSION_BUCKET, <<"roster_version">>).
 
-%create_table() ->
-    %ok.
+create_table() ->
+    ok.
 
-%delete_item(LUser, LServer, LJID) ->
-    %ejabberd_riak:delete(?ROSTER_BUCKET, {LUser, LServer, LJID}).
+%% Delete single roster element
+delete_item(LUser, LServer, LJID) ->
+    US = {LUser, LServer},
+    {ok, Roster} = ejabberd_riak:get(?ROSTER_BUCKET, US),
+    ejabberd_riak:set(?ROSTER_BUCKET, US,
+        lists:keydelete(LJID, #roster.jid, Roster)).
 
+remove_user_storage(US) ->
+    ejabberd_riak:delete(?ROSTER_BUCKET, US).
+
+%% map-reduce version draft
 %remove_user_storage(US) ->
     %%% select only objects which contain US user
     %Map = fun() -> ok end,
@@ -27,105 +37,147 @@
         %[{map, {qfun, Map}, none, false},
          %{reduce, {qfun, Red}, none, false}]).
 
-%-spec store_offline_messages(user(), list(), infinity | integer())
-    %-> ok | {error, any()}.
-%store_offline_messages(US, Msgs, MaxOfflineMsgs) ->
-    %{ok, OldMsgs} = get_messages(US),
-    %NewMsgs = lists:ukeysort(#offline_msg.timestamp,
-        %OldMsgs ++ Msgs),
-    %Len = length(NewMsgs),
-    %if
-        %MaxOfflineMsgs =/= infinity andalso Len > MaxOfflineMsgs ->
-            %mod_offline:discard_warn_sender(Msgs),
-            %ok;
-        %true ->
-            %ejabberd_riak:set(?OFFLINE_BUCKET, US, NewMsgs)
-    %end.
+read_roster_version_storage(US) ->
+    {ok, Version} = ejabberd_riak:get(?ROSTER_VERSION_BUCKET, US),
+    Version.
 
-%%% Opts may include:
-%%% - dirty | {dirty, true | false} - the read will (or will not) be done
-%%%   using mnesia:dirty_read instead of doing it inside a transaction
-%%%   context and the return value is the dirty_read's raw return value,
-%%%   also no messages are removed from the database
-%-spec load_offline_messages(user(), Opts :: list())
-    %->  Messages :: list()
-    %|   {ok, Messages :: list()}
-    %|   {error, any()}.
-%load_offline_messages(US, Opts) ->
-    %case get_messages(US) of
-        %{ok, Msgs} ->
-            %case proplists:get_value(dirty, Opts, false) of
-                %true ->
-                    %Msgs;
-                %false ->
-                    %ejabberd_riak:delete(?OFFLINE_BUCKET, US),
-                    %{ok, Msgs}
-            %end;
-        %Error ->
-            %Error
-    %end.
+write_to_roster_storage(Rec = #roster{us=US, jid=LJID}) ->
+    {ok, Roster} = ejabberd_riak:get(?ROSTER_BUCKET, US),
+    ejabberd_riak:set(?ROSTER_BUCKET, US,
+        lists:keystore(LJID, #roster.jid, Roster, Rec)).
 
-%-spec remove_expired_messages(time()) -> ok | {error, any()}.
-%remove_expired_messages(TimeStamp) ->
-    %{error, not_implemented_yet}.
-    %%mnesia:foldl(
-        %%fun(Rec, _Acc) ->
-            %%case Rec#offline_msg.expire of
-                %%never ->
-                    %%ok;
-                %%TS ->
-                    %%if
-                        %%TS < TimeStamp ->
-                            %%mnesia:delete_object(Rec);
-                        %%true ->
-                            %%ok
-                    %%end
-            %%end
-        %%end, ok, offline_msg)
+write_to_roster_version_storage(Rec = #roster_version{us=US}) ->
+    ejabberd_riak:set(?ROSTER_VERSION_BUCKET, US, Rec).
 
-%-spec remove_old_messages(time()) -> ok | {error, any()}.
-%remove_old_messages(TimeStamp) ->
-    %{error, not_implemented_yet}.
-    %%F = fun() ->
-        %%mnesia:write_lock_table(offline_msg),
-        %%mnesia:foldl(
-            %%fun(#offline_msg{timestamp = TS} = Rec, _Acc)
-                %%when TS < TimeStamp ->
-                    %%mnesia:delete_object(Rec);
-                %%(_Rec, _Acc) -> ok
-            %%end, ok, offline_msg)
-    %%end,
-    %%transaction_no_result(F).
+read_user_roster(US) ->
+    {ok, Roster} = ejabberd_riak:get(?ROSTER_BUCKET, US),
+    Roster.
 
-%-spec remove_user(user()) -> ok | {error, any()}.
-%remove_user(US) ->
-    %ejabberd_riak:delete(?OFFLINE_BUCKET, US).
+read_roster({LUser, LServer, LJID}) ->
+    US = {LUser, LServer},
+    {ok, Roster} = ejabberd_riak:get(?ROSTER_BUCKET, US),
+    case lists:keyfind(LJID, #roster.jid, Roster) of
+        false ->
+            {error, notfound};
+        RosterItem ->
+            [RosterItem]
+    end.
 
-%%% Supported Opts:
-%%% - write_lock - the whole table is write locked at the start of the
-%%%   transaction
-%-spec delete_offline_messages(list(), list()) -> ok | {error, any()}.
-%delete_offline_messages(Messages, Opts) ->
-    %{error, not_implemented_yet}.
-    %%F = fun() ->
-        %%case proplists:get_value(write_lock, Opts, false) of
-            %%true ->
-                %%mnesia:write_lock_table(offline_msg);
-            %%false ->
-                %%ok
-        %%end,
-        %%lists:foreach(fun(Msg) -> mnesia:delete_object(Msg) end, Messages)
-    %%end,
-    %%transaction_no_result(F).
+process_item_set_storage(Attrs, Els, _User, JID, LUser, LServer, LJID) ->
+    US = {LUser, LServer},
+    {ok, Roster} = ejabberd_riak:get(?ROSTER_BUCKET, US),
+    Item = case lists:keyfind(LJID, #roster.jid, Roster) of
+        false ->
+            #roster{usj = {LUser, LServer, LJID},
+                    us = US,
+                    jid = JID};
+        I ->
+            I#roster{jid = JID,
+                     name = "",
+                     groups = [],
+                     xs = []}
+    end,
+    Item1 = mod_roster:process_item_attrs(Item, Attrs),
+    Item2 = mod_roster:process_item_els(Item1, Els),
+    Roster1 = case Item2#roster.subscription of
+        remove ->
+            lists:keydelete(LJID, #roster.jid, Roster);
+        _ ->
+            lists:keystore(LJID, #roster.jid, Roster, Item2)
+    end,
+    ejabberd_riak:set(?ROSTER_BUCKET, US, Roster1),
+    %% If the item exist in shared roster, take the
+    %% subscription information from there:
+    Item3 = ejabberd_hooks:run_fold(roster_process_item,
+       LServer, Item2, [LServer]),
+    case mod_roster:roster_version_on_db(LServer) of
+        true -> 
+            Version = sha:sha(term_to_binary(now())),
+            ejabberd_riak:set(?ROSTER_VERSION_BUCKET, US,
+                #roster_version{us = US, version = Version});
+        false ->
+            ok
+    end,
+    {ok, {Item, Item3}}.
 
-%%%% Helpers
+process_subscription_storage(Direction, Type, Reason, JID1, US, LUser, LServer, LJID) ->
+    US = {LUser, LServer},
+    {ok, Roster} = ejabberd_riak:get(?ROSTER_BUCKET, US),
+    Item = case lists:keyfind(LJID, #roster.jid, Roster) of
+        false ->
+            JID = {JID1#jid.user,
+                   JID1#jid.server,
+                   JID1#jid.resource},
+            #roster{usj = {LUser, LServer, LJID},
+                    us = US,
+                    jid = JID};
+        I ->
+            I
+    end,
+    NewState = case Direction of
+        out ->
+            mod_roster:out_state_change(Item#roster.subscription,
+                Item#roster.ask,
+                Type);
+        in ->
+            mod_roster:in_state_change(Item#roster.subscription,
+                Item#roster.ask,
+                Type)
+    end,
+    AutoReply = case Direction of
+        out ->
+            none;
+        in ->
+            mod_roster:in_auto_reply(Item#roster.subscription,
+                Item#roster.ask,
+                Type)
+    end,
+    AskMessage = case NewState of
+        {_, both} ->
+            Reason;
+        {_, in}  ->
+            Reason;
+        _         ->
+            ""
+    end,
+    case NewState of
+        none ->
+            Roster1 = Roster,
+            NextState = {none, AutoReply};
+        {none, none} when Item#roster.subscription == none,
+                          Item#roster.ask == in ->
+            Roster1 = lists:keydelete(LJID, #roster.jid, Roster),
+            NextState = {none, AutoReply};
+        {Subscription, Pending} ->
+            NewItem =
+                Item#roster{subscription = Subscription,
+                            ask = Pending,
+                            askmessage = list_to_binary(AskMessage)},
+            Roster1 = lists:keystore(LJID, #roster.jid, Roster, NewItem),
+            case mod_roster:roster_version_on_db(LServer) of
+                true ->
+                    Version = sha:sha(term_to_binary(now())),
+                    ejabberd_riak:set(?ROSTER_VERSION_BUCKET, US, 
+                        #roster_version{us = US, version = Version});
+                false ->
+                    ok
+            end,
+            NextState = {{push, NewItem}, AutoReply}
+    end,
+    ejabberd_riak:set(?ROSTER_BUCKET, US, Roster1),
+    {ok, NextState}.
 
-%get_messages(US) ->
-    %case ejabberd_riak:get(?OFFLINE_BUCKET, US) of
-        %{ok, Msgs} ->
-            %{ok, Msgs};
-        %{error, notfound} ->
-            %{ok, []};
-        %Error ->
-            %Error
-    %end.
+roster_version_storage(US) ->
+    case ejabberd_riak:get(?ROSTER_VERSION_BUCKET, US) of
+        {ok, Version} ->
+            Version;
+        {error, notfound} ->
+            not_found;
+        {error, Error} ->
+            throw(Error)
+    end.
+
+set_items_storage(LUser, LServer, Els) ->
+    lists:foreach(fun(El) ->
+        mod_roster:process_item_set_t(LUser, LServer, El)
+        end, Els).
