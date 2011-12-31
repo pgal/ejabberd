@@ -4,6 +4,8 @@
 -export([start_link/1,
          get/2,
          set/3,
+         foreach/2,
+         collect/3,
          delete/1,
          delete/2,
          list_keys/1,
@@ -25,9 +27,13 @@ get(Bucket, Key) ->
             Error
     end.
 
+%% Be careful if/when using real binary data as keys (i.e. not binaries
+%% made with term_to_binary/1) as it may cause unintended collisions with
+%% keys made with term_to_binary/1 from Erlang native terms.
 -spec get_obj(binary(), term()) -> {ok, term()} | {error, any()}.
-get_obj(Bucket, Key) ->
-    BinaryKey = term_to_binary(Key),
+get_obj(Bucket, Key) when not is_binary(Key) ->
+    get_obj(Bucket, term_to_binary(Key));
+get_obj(Bucket, BinaryKey) ->
     riakc_pb_socket:get(get_worker(), Bucket, BinaryKey).
 
 -spec set(binary(), term(), term()) -> ok | {error, any()}.
@@ -47,8 +53,8 @@ set(Bucket, Key, Value) ->
 
 %% Perform operation for each key in bucket.
 %% F = fun(RiakWorker::pid(), BinaryKey::binary()).
--spec foreach(binary(), fun()) -> ok | {error, any()}.
-foreach(Bucket, F) ->
+-spec foreach(fun(), binary()) -> any().
+foreach(F, Bucket) ->
     case riakc_pb_socket:list_keys(get_worker(), Bucket) of
         {ok, BinKeys} ->
             lists:foreach(fun(Key) -> F(get_worker(), Key) end, BinKeys);
@@ -60,8 +66,37 @@ foreach(Bucket, F) ->
 %% TODO: I feel it's far from elegant.
 -spec delete(binary()) -> ok | {error, any()}.
 delete(Bucket) ->
-    foreach(Bucket,
-        fun(W, Key) -> riakc_pb_socket:delete(W, Bucket, Key) end).
+    foreach(fun(W, Key) ->
+                riakc_pb_socket:delete(W, Bucket, Key)
+            end,
+            Bucket).
+
+%% Perform operation for each key in bucket.
+%% F = fun(RiakWorker::pid(), BinaryKey::binary(), Acc::any()).
+-spec collect(fun(), any(), binary()) -> any().
+collect(F, Acc0, Bucket) ->
+    case riakc_pb_socket:list_keys(get_worker(), Bucket) of
+        {ok, BinKeys} ->
+            lists:foldl(fun(Key, Acc) ->
+                            F(get_worker(), Key, Acc)
+                        end,
+                        Acc0,
+                        BinKeys);
+        Error ->
+            Error
+    end.
+
+%% collect usage example (for values being stringified integers):
+%   F = fun(_,E,A) ->
+%           case ejabberd_riak:get(<<"test">>, E) of
+%               {ok,V} ->
+%                   list_to_integer(V) + A;
+%               _ ->
+%                   A
+%           end
+%   end,
+%   ejabberd_riak:collect(F, 0, <<"test">>).
+
 
 %% Delete object by key.
 -spec delete(binary(), term()) -> ok | {error, any()}.
