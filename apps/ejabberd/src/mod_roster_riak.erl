@@ -50,8 +50,12 @@ write_to_roster_version_storage(Rec = #roster_version{us=US}) ->
     ejabberd_riak:set(?ROSTER_VERSION_BUCKET, US, Rec).
 
 read_user_roster(US) ->
-    {ok, Roster} = ejabberd_riak:get(?ROSTER_BUCKET, US),
-    Roster.
+    case ejabberd_riak:get(?ROSTER_BUCKET, US) of
+        {ok, Roster} ->
+            [Roster];
+        _ ->
+            []
+    end.
 
 read_roster({LUser, LServer, LJID}) ->
     US = {LUser, LServer},
