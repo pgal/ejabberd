@@ -47,7 +47,14 @@ remove_timeout_storage(Source) ->
     ?DISPATCH(remove_timeout_storage, [Source]).
 
 
+create_table() ->
+    ?DISPATCH(create_table, []).
+
 start(Host, Opts) ->
+
+    ejabberd_backend:init(?MYNAME, ?MODULE),
+    create_table(),
+
     IQDisc = gen_mod:get_opt(iqdisc, Opts, one_queue),
     gen_iq_handler:add_iq_handler(ejabberd_local, Host, ?NS_REGISTER,
 				  ?MODULE, process_iq, IQDisc),
@@ -57,11 +64,7 @@ start(Host, Opts) ->
  		       ?MODULE, stream_feature_register, 50),
     ejabberd_hooks:add(c2s_unauthenticated_iq, Host,
  		       ?MODULE, unauthenticated_iq_register, 50),
-    mnesia:create_table(mod_register_ip,
-			[{ram_copies, [node()]},
-			 {local_content, true},
-			 {attributes, [key, value]}]),
-    mnesia:add_table_copy(mod_register_ip, node(), ram_copies),
+
     ok.
 
 stop(Host) ->
@@ -442,14 +445,14 @@ check_timeout(Source) ->
 	    CleanPriority = Priority + Timeout,
 		case check_timeout_storage(Source, Priority, CleanPriority) of
 			ok ->
-				ok;
+				true;
 			{error, Reason} ->
 				?ERROR_MSG("mod_register: timeout check error: ~p~n",
 					[Reason]),
 				true
 		end;
 	true ->
-	    ok
+	    true
     end.
 
 clean_treap(Treap, CleanPriority) ->
