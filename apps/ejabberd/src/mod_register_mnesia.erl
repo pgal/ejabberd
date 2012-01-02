@@ -31,8 +31,8 @@ check_timeout_storage(Source, Priority, CleanPriority) ->
 		end
 	end,
     case mnesia:transaction(F) of
-        {atomic, _Res} ->
-            ok;
+        {atomic, Res} ->
+            Res;
         {aborted, Reason} ->
             {error, Reason}
     end.

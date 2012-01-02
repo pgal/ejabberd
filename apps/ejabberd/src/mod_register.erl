@@ -37,7 +37,7 @@
 	 process_iq/3,
 	 clean_treap/2]).
 
--include("mod_offline.hrl").
+-include("mod_register.hrl").
 
 check_timeout_storage(Source, Priority, CleanPriority) ->
     ?DISPATCH(check_timeout_storage, [Source, Priority, CleanPriority]).
@@ -444,12 +444,12 @@ check_timeout(Source) ->
 	    Priority = -(MSec * 1000000 + Sec),
 	    CleanPriority = Priority + Timeout,
 		case check_timeout_storage(Source, Priority, CleanPriority) of
-			ok ->
-				true;
 			{error, Reason} ->
 				?ERROR_MSG("mod_register: timeout check error: ~p~n",
 					[Reason]),
-				true
+				true;
+			Res -> 
+				Res
 		end;
 	true ->
 	    true
