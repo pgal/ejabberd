@@ -28,7 +28,11 @@ ct() ->
         %, {testcase, block_jid_message}
         %, {testcase, block_jid_all}
 
-        , {suite, "offline_SUITE"}
+        , {suite, "login_SUITE"}
+        , {group, [messages]}
+        , {testcase, messages_story}
+
+        %, {suite, "offline_SUITE"}
 
         %, {group, [presence]}
         %% with repeat_until_any_ok single test runs fail,
@@ -39,6 +43,6 @@ ct() ->
         %, {group, [load]}
         %, {testcase, load_data}
 
-        , {group, [leakage]}
+        %, {group, [leakage]}
     ]),
     init:stop(0).
