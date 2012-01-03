@@ -66,11 +66,11 @@ delete_session_storage(SID, Server) ->
 	end,
     mnesia:sync_dirty(F).
 
-get_user_storage(USR) ->
-	mnesia:dirty_index_read(session, USR, #session.usr).
+get_session(User, Server, Resource) ->
+	mnesia:dirty_index_read(session, {User, Server, Resource}, #session.usr).
 
-get_user_resource_storage(US) ->
-	mnesia:dirty_index_read(session, US, #session.us).
+get_session(User, Server) ->
+	mnesia:dirty_index_read(session, {User, Server}, #session.us).
 
 set_session_storage(SID, USR, US, Priority, Info) ->
     F = fun() ->

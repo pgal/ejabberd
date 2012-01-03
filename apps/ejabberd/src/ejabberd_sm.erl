@@ -78,11 +78,11 @@ read_session_storage(SID) ->
 delete_session_storage(SID, Server) ->
 	?DISPATCH(delete_session_storage, [SID, Server]).
 
-get_user_storage(USR) ->
-	?DISPATCH(get_user_storage, [USR]).
+get_session(User, Server, Resource) ->
+	?DISPATCH(get_session, [User, Server, Resource]).
 
-get_user_resource_storage(US) ->
-	?DISPATCH(get_user_resource_storage, [US]).
+get_session(User, Server) ->
+	?DISPATCH(get_session, [User, Server]).
 
 set_session_storage(SID, USR, US, Priority, Info) ->
 	?DISPATCH(set_session_storage, [SID, USR, US, Priority, Info]).
@@ -152,8 +152,7 @@ disconnect_removed_user(User, Server) ->
 get_user_resources(User, Server) ->
     LUser = jlib:nodeprep(User),
     LServer = jlib:nameprep(Server),
-    US = {LUser, LServer},
-    case catch get_user_resource_storage(US) of
+    case catch get_session(LUser, LServer) of
 	{'EXIT', _Reason} ->
 	    [];
 	Ss ->
@@ -164,8 +163,7 @@ get_user_ip(User, Server, Resource) ->
     LUser = jlib:nodeprep(User),
     LServer = jlib:nameprep(Server),
     LResource = jlib:resourceprep(Resource),
-    USR = {LUser, LServer, LResource},
-    case get_user_storage(USR) of
+    case get_session(LUser, LServer, LResource) of
 	[] ->
 	    undefined;
 	Ss ->
@@ -177,8 +175,7 @@ get_user_info(User, Server, Resource) ->
     LUser = jlib:nodeprep(User),
     LServer = jlib:nameprep(Server),
     LResource = jlib:resourceprep(Resource),
-    USR = {LUser, LServer, LResource},
-    case get_user_storage(USR) of
+    case get_session(LUser, LServer, LResource) of
 	[] ->
 	    offline;
 	Ss ->
@@ -208,8 +205,7 @@ get_session_pid(User, Server, Resource) ->
     LUser = jlib:nodeprep(User),
     LServer = jlib:nameprep(Server),
     LResource = jlib:resourceprep(Resource),
-    USR = {LUser, LServer, LResource},
-    case catch get_user_storage(USR) of
+    case catch get_session(LUser, LServer, LResource) of
 	[#session{sid = {_, Pid}}] -> Pid;
 	_ -> none
     end.
@@ -457,8 +453,7 @@ do_route(From, To, Packet) ->
 		    ok
 	    end;
 	_ ->
-	    USR = {LUser, LServer, LResource},
-	    case get_user_storage(USR) of
+	    case get_session(LUser, LServer, LResource) of
 		[] ->
 		    case Name of
 			"message" ->
@@ -520,8 +515,7 @@ route_message(From, To, Packet) ->
 	      %% positive
 	      fun({P, R}) when P == Priority ->
 		      LResource = jlib:resourceprep(R),
-		      USR = {LUser, LServer, LResource},
-		      case get_user_storage(USR) of
+		      case get_session(LUser, LServer, LResource) of
 			  [] ->
 			      ok; % Race condition
 			  Ss ->
@@ -589,8 +583,7 @@ clean_session_list([S1, S2 | Rest], Res) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 get_user_present_resources(LUser, LServer) ->
-    US = {LUser, LServer},
-    case catch get_user_resource_storage(US) of
+    case catch get_session(LUser, LServer) of
 	{'EXIT', _Reason} ->
 	    [];
 	Ss ->
@@ -612,10 +605,9 @@ check_for_sessions_to_replace(User, Server, Resource) ->
     check_max_sessions(LUser, LServer).
 
 check_existing_resources(LUser, LServer, LResource) ->
-    USR = {LUser, LServer, LResource},
     %% A connection exist with the same resource. We replace it:
 	
-    Sessions = get_user_storage(USR),
+    Sessions = get_session(LUser, LServer, LResource),
     SIDs = [S#session.sid || S <- Sessions],
 
 %    SIDs = mnesia:dirty_select(
@@ -633,11 +625,9 @@ check_existing_resources(LUser, LServer, LResource) ->
     end.
 
 check_max_sessions(LUser, LServer) ->
-    USR = {LUser, LServer},
-
     %% If the max number of sessions for a given is reached, we replace the
     %% first one
-    Sessions = get_user_storage(USR),
+    Sessions = get_session(LUser, LServer),
     SIDs = [S#session.sid || S <- Sessions],
 %     SIDs = mnesia:dirty_select(
 % 	     session,
@@ -698,8 +688,8 @@ process_iq(From, To, Packet) ->
 	    ok
     end.
 
-force_update_presence({LUser, _LServer} = US) ->
-    case catch get_user_resource_storage(US) of
+force_update_presence({LUser, LServer}) ->
+    case catch get_session(LUser, LServer) of
         {'EXIT', _Reason} ->
             ok;
         Ss ->

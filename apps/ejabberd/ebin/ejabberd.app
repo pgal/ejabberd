@@ -55,6 +55,7 @@
              ejabberd_service,
              ejabberd_sm,
              ejabberd_sm_mnesia,
+             ejabberd_sm_riak,
              ejabberd_socket,
              ejabberd_stun,
              ejabberd_sup,
