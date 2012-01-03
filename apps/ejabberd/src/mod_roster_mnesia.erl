@@ -1,6 +1,17 @@
 -module(mod_roster_mnesia).
 
--compile([export_all]).
+-export([create_table/0,
+         delete_item/3,
+         remove_user_storage/1,
+         read_roster_version_storage/1,
+         write_to_roster_storage/1,
+         write_to_roster_version_storage/1,
+         read_user_roster/1,
+         read_roster/1,
+         roster_version_storage/1,
+         set_items_storage/3,
+         process_item_set_storage/7,
+         process_subscription_storage/8]).
 
 -include("ejabberd.hrl").
 -include("jlib.hrl").
@@ -30,14 +41,6 @@ remove_user_storage(US) ->
 
 read_roster_version_storage(US) ->
 	mnesia:dirty_read(roster_version, US).
-
-write_to_storage(Rec, Opts) ->
-	case proplists:get_value(dirty, Opts, false) of
-		true ->
-			mnesia:dirty_write(Rec);
-		false ->
-			mnesia:write(Rec)
-    end.
 	
 write_to_roster_storage(Rec) ->
     mnesia:write(Rec).

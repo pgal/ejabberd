@@ -1,6 +1,17 @@
 -module(mod_roster_riak).
 
--compile([export_all]).
+-export([create_table/0,
+         delete_item/3,
+         remove_user_storage/1,
+         read_roster_version_storage/1,
+         write_to_roster_storage/1,
+         write_to_roster_version_storage/1,
+         read_user_roster/1,
+         read_roster/1,
+         roster_version_storage/1,
+         set_items_storage/3,
+         process_item_set_storage/7,
+         process_subscription_storage/8]).
 
 -include("jlib.hrl").
 -include("mod_roster.hrl").
